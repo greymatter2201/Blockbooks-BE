@@ -35,4 +35,4 @@ db = SQLAlchemy(app)
 #Instantiate Migration
 migrate = Migrate(app, db)
 
-from app import routes
+from app import routes, models

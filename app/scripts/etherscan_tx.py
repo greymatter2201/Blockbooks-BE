@@ -41,7 +41,7 @@ def get_tx_action(hash):
         return parse_tx_action(tx_actions)
     return None
 
-def get_tx(address, startblock=0, endblock=99999999):
+def get_tx(address, offset=0, startblock=0, endblock=99999999):
     response = requests.get('https://api.etherscan.io/api'
    '?module=account'
    '&action=txlist'
@@ -49,7 +49,7 @@ def get_tx(address, startblock=0, endblock=99999999):
    f'&startblock={startblock}'
    f'&endblock={endblock}'
    '&page=1'
-   '&offset=10'
+   f'&offset={offset}'
    '&sort=desc'
    f'&apikey={ETHERSCAN_API_KEY}')
 
