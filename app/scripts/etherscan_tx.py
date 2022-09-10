@@ -122,4 +122,9 @@ def get_eth_candle_rate(timestamp):
     hour, minute = time_tup
     url = f"https://api.exchange.coinbase.com/products/ETH-USD/candles?granularity=60&start={date_str}%20{hour}%3A{minute}%3A00&end={date_str}%20{hour}%3A{minute}%3A59"
     response = requests.get(url)
-    return response.json()[0][4]
+    try:
+        result = response.json()[0][4]
+    except IndexError:
+        return 0
+    else:
+        return response.json()[0][4]
