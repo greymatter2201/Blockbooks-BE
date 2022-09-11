@@ -17,6 +17,6 @@ def test_get_tx_action():
 
     res1 = etherscan_tx.get_tx_action(tx_hash)
     res2 = etherscan_tx.get_tx_action(tx_hash_none)
-    assert res1 != None
-    assert res2 == None
+    assert len(res1) != 0
+    assert len(res2) == 0
     
