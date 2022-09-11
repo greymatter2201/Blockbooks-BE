@@ -26,6 +26,7 @@ def get_eth_candle_rate(datetime):
     else:
         return response.json()[0][4]
 
+#Convert date string into timestamp
 def convert_datetime(datetime):
     d = datetime
     d = d.replace("T", " ")
@@ -44,10 +45,15 @@ def get_tx(address, page_size=10):
     # The transactions are in a dictionary in the array
     for tx in tx_array:
         timestamp = convert_datetime(tx.get('block_signed_at'))
+
+        #Get ETH rate from get_eth_candle_rate (coinbase API)
+        #If that doesnt return anything,
+        #Uses gas_quote_price from covalent API
         rate = get_eth_candle_rate(tx.get('block_signed_at'))
         eth_rate = lambda rate : rate if rate else tx.get('gas_quote_price')
         f_eth_rate = float("{:.2f}".format(eth_rate(rate)))
 
+        #Gets TX actions from scraping Etherscan
         actions = get_tx_action(tx.get('tx_hash'))
         action = [action[0] for action in actions]
 
