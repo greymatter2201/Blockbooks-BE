@@ -1,5 +1,7 @@
-import requests, os, time
+import requests, os, time, sys
 from dotenv import load_dotenv
+# Bring your packages onto the path
+sys.path.append(os.path.abspath(os.path.join('..', 'Blockbooks_BE', 'app')))
 from scripts.etherscan_tx import get_tx_action
 
 load_dotenv()
@@ -25,7 +27,7 @@ def get_eth_candle_rate(datetime):
         return response.json()[0][4]
 
 def convert_datetime(datetime):
-    d = "2022-09-11T10:08:16Z"
+    d = datetime
     d = d.replace("T", " ")
     d = d.replace("Z", "")
     timestamp = time.mktime(time.strptime(d, '%Y-%m-%d %H:%M:%S'))
