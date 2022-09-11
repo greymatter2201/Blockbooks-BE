@@ -19,3 +19,4 @@ def test_get_tx_action():
     res2 = etherscan_tx.get_tx_action(tx_hash_none)
     assert res1 != None
     assert res2 == None
+    

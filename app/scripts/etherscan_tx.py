@@ -32,14 +32,14 @@ def get_tx_action(hash):
             parent = grandparent[0].find_all("ul", class_="list-unstyled")
             child = parent[0].find_all("li", class_="media", recursive=False)
         except IndexError:
-            return None
+            return []
         tx_actions = []
         for i in range(len(child)):
             tx_action = child[i].find_all("div", class_="media-body")
             tx_actions.append(tx_action[0].getText(' '))
         
         return parse_tx_action(tx_actions)
-    return None
+    return []
 
 def get_tx(address, offset=0, startblock=0, endblock=99999999):
     response = requests.get('https://api.etherscan.io/api'
@@ -90,6 +90,7 @@ def parse_tx_action(tx_action):
             action.remove('For')
             action.remove('On')
             action.remove('To')
+            action.remove('into')
         except ValueError:
             pass
 

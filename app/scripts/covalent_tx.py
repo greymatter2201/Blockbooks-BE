@@ -1,7 +1,6 @@
 import requests, os, time
 from dotenv import load_dotenv
-from etherscan_tx import get_tx_action
-from pprint import pprint
+from scripts.etherscan_tx import get_tx_action
 
 load_dotenv()
 
@@ -47,6 +46,9 @@ def get_tx(address, page_size=10):
         eth_rate = lambda rate : rate if rate else tx.get('gas_quote_price')
         f_eth_rate = float("{:.2f}".format(eth_rate(rate)))
 
+        actions = get_tx_action(tx.get('tx_hash'))
+        action = [action[0] for action in actions]
+
         transactions[tx.get('tx_hash')] = {
             'block_number': tx.get('block_height'),
             'from_addr': tx.get('from_address'),
@@ -55,7 +57,7 @@ def get_tx(address, page_size=10):
             'value': tx.get('value'),
             'gas': tx.get('gas_spent'),
             'gas_price': tx.get('gas_price'),
-            'action': None,
+            'action': action,
             'rate': f_eth_rate,
         }
     return transactions
