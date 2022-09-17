@@ -5,5 +5,9 @@ from scripts import covalent_tx
 
 def test_get_tx():
     address = "0x03d15Ec11110DdA27dF907e12e7ac996841D95E4"
-    tx = covalent_tx.get_tx(address, page_size=1)
-    assert tx != None
+    tx = covalent_tx.get_tx('1', address, page_size=1)
+    assert tx is not None
+
+def test_get_latest_block():
+    block_height = covalent_tx.get_latest_block('1')
+    assert block_height is not None

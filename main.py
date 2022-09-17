@@ -1,16 +1,16 @@
 from app import app, socketio, db
-from app.models import Transactions, Wallet, User, transaction_details, Contact, Labels, label_schema
+from app.models import Transaction, Wallet, User, transaction_detail, Contact, Label, label_schema
 
 @app.shell_context_processor
 def make_shell_context():
     return {
         'db': db,
-        'Transactions': Transactions,
-        'transaction_details' : transaction_details,
+        'Transactions': Transaction,
+        'transaction_details' : transaction_detail,
         'Contact': Contact,
         'Wallet': Wallet,
         'User': User,
-        'Labels': Labels,
+        'Labels': Label,
         'label_schema': label_schema
     }
 

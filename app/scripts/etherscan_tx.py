@@ -58,7 +58,7 @@ def get_tx(address, offset=0, startblock=0, endblock=99999999):
     transactions = {}
     for r in result:
         timestamp = r['timeStamp']
-        ethusd_rate = get_eth_candle_rate(timestamp)
+        ethusd_rate = get_candle_rate('1', timestamp)
         tx_fee = int(r['gasUsed']) * int(r['gasPrice'])
 
         tx_fee_in_eth = tx_fee / 10**18
@@ -110,6 +110,12 @@ def parse_timestamp_tup(timestamp):
     time_tup = tuple(time_str.split(":"))
     return date_str, time_tup
 
+def get_eth_blockNumber():
+    response = requests.get(f'https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey={ETHERSCAN_API_KEY}')
+    response = response.json()
+    block_number = response['result'] # --> Returns Hexadeciaml
+    return int(block_number, 16) # Convert to decimal
+
 def get_eth_rate(timestamp):
     date = parse_timestamp(timestamp)
     response = requests.get(f"https://api.exchangerate.host/{date}?base=USD&source=crypto&symbols=ETH")
@@ -118,14 +124,25 @@ def get_eth_rate(timestamp):
         return None
     return response['rates']['ETH']
 
-def get_eth_candle_rate(timestamp):
+def get_candle_rate(chain_id, timestamp):
+    id_to_chain = {
+        '1': 'ETH',
+        '137': 'MATIC',
+        '43114': 'AVAX'
+    }
+    try:
+        ticker = id_to_chain[chain_id]
+    except KeyError:
+        return None
+
     date_str, time_tup = parse_timestamp_tup(timestamp)
     hour, minute = time_tup
-    url = f"https://api.exchange.coinbase.com/products/ETH-USD/candles?granularity=60&start={date_str}%20{hour}%3A{minute}%3A00&end={date_str}%20{hour}%3A{minute}%3A59"
+    url = f"https://api.exchange.coinbase.com/products/{ticker}-USD/candles?granularity=60&start={date_str}%20{hour}%3A{minute}%3A00&end={date_str}%20{hour}%3A{minute}%3A59"
     response = requests.get(url)
+
     try:
         result = response.json()[0][4]
     except IndexError:
-        return 0
+        return None
     else:
         return response.json()[0][4]

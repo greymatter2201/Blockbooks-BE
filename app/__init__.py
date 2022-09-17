@@ -1,5 +1,5 @@
 from flask import Flask
-from config import Config
+from config import Config, TestConfig
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
@@ -24,7 +24,7 @@ socketio = SocketIO(app)
 #Instantiate Celery
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
-celery = Celery(__name__, broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+celery = Celery(__name__, broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND, result_expires=300)
 
 #Set app's config
 app.config.from_object(Config)
