@@ -11,20 +11,20 @@ def NotNull(*args,**kwargs):
 class Transaction(db.Model):
     tx_hash = db.Column(db.String(66), primary_key=True)
     chain_id = NotNull(db.Integer)
-    block_number = NotNull(db.Integer)
+    block_number = NotNull(db.String)
     from_addr = NotNull(db.String(42))
     to_addr = NotNull(db.String(42))
     tx_timestamp = NotNull(db.BigInteger)
-    tx_value = NotNull(db.Integer)
-    tx_gas = NotNull(db.Integer)
+    tx_value = NotNull(db.BigInteger)
+    tx_gas = NotNull(db.BigInteger)
     tx_gas_price = NotNull(db.BigInteger)
-    tx_actions = db.Column(db.String(20))
+    tx_actions = db.Column(db.String)
     rate = db.Column(db.Float)
 
     details = db.relationship('transaction_detail', backref='details', lazy='dynamic')
 
     def __repr__(self):
-        return f'<Tx {self.tx_hash}, Address {self.address}>'
+        return f'<Tx {self.tx_hash}>'
 
 class transaction_detail(db.Model):
     id = db.Column(db.Integer, primary_key=True)

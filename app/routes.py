@@ -1,11 +1,4 @@
-from flask_restful import (
-    Resource,
-    abort,
-    reqparse,
-    fields,
-    marshal_with
-)
-import re
+from flask_restful import Resource, abort, marshal_with, fields
 from flask import abort, request, g, jsonify
 from app import db, api, celery
 from app.models import (
@@ -18,9 +11,11 @@ from app.models import (
     label_schema
 )
 from app.tasks import update_txModel, add
+from app.fields import *
 from siwe import generate_nonce, siwe, SiweMessage
 from flask_httpauth import HTTPTokenAuth
 from sqlalchemy import or_
+import re
 
 
 auth = HTTPTokenAuth(scheme="Bearer")
@@ -117,18 +112,15 @@ class Wallets(Resource):
         data = {"User": user.address, "Wallet": address}
         return {"results": "success", "data": data}, 200
 
+    @marshal_with(wallets_field, envelope='data')
     @auth.login_required
     def get(self):
         user = g.user
         wallets = user.wallets.all()
         if wallets is None:
             abort(400, "User has not registered any wallet")
-
-        wallets_dict = {}
-        for wallet in wallets:
-            wallets_dict[wallet.id] = wallet.address
         
-        return {"results": "success", "data": wallets_dict}, 200
+        return wallets, 200
 
 class Contacts(Resource):
     @auth.login_required
@@ -152,22 +144,26 @@ class Contacts(Resource):
         data = {"user": user.address, "contact": name, "address": address}
         return {"results":"success", "data": data}, 200
     
+    @marshal_with(contacts_field)
     @auth.login_required
     def get(self):
         user = g.user
         contacts = user.contacts.all()
         if contacts is None:
             abort(400, "User has not registered any contacts")
-            
-        contacts_dict = {}
-        for contact in contacts:
-            contacts_dict[contact.id] = {
-                'name': contact.name,
-                'address': contact.address
-            }
-        return {"results": "success", "data": contacts_dict}, 200
+
+        return {"results": "success", "data": contacts}, 200
 
 class Transactions(Resource):
+    def post(self, chain_id, address):
+        update_txModel.apply_async(
+            kwargs={'chain_id': chain_id, 'address': address},
+            task_id = address
+            )
+        data = {"task_id": address}
+        return {"results": "success", "data": data}, 200
+
+    @marshal_with(tx_field, envelope='data')
     def get(self, chain_id, address):
         address = address.lower()
         results = Transaction.query.filter_by(
@@ -175,13 +171,9 @@ class Transactions(Resource):
         ).filter(or_(Transaction.from_addr == address, Transaction.to_addr == address)).all()
 
         if results is None:
-            update_txModel.apply_async(
-            kwargs={'chain_id': chain_id, 'address': address},
-            task_id = address
-            )
-            return {"results": "success", "data": f"Fetching transactions for {address}"}
-    
-        return {"results": "success", "data": results}, 200
+            abort(400, "No transactions for this address on this chain")
+
+        return results, 200
 
 class TransactionResult(Resource):
     def get(self, address):
@@ -214,6 +206,7 @@ class Labels(Resource):
 
         return {"results": "success", "data": {"label": label, "user": user.address}}, 200
     
+    @marshal_with(labels_field, envelope='data')
     @auth.login_required
     def get(self):
         user = g.user
@@ -222,16 +215,8 @@ class Labels(Resource):
 
         if labels is None:
             abort(400, "No labels for this user")
-        
-        label_dict = {}
-        for label in labels:
-            label_dict[label.id] = {
-                'created_by': label.created_by,
-                'label': label.label,
-                'is_active': label.is_active
-            }
-        
-        return {"results": "success", "data": label_dict}, 200
+         
+        return labels, 200
 
 
 class LabelSchemas(Resource):
@@ -271,6 +256,7 @@ class LabelSchemas(Resource):
 
         return {"results" : "success", "data": {}}, 200
 
+    @marshal_with(labelSchema_fields, envelope='data')
     @auth.login_required
     def get(self):
         user = g.user
@@ -279,18 +265,7 @@ class LabelSchemas(Resource):
         if schemas is None:
             abort(400, "User does not have any label schemas")
         
-        schema_dict = {}
-        for schema in schemas:
-            schema_dict[schema.id] = {
-                'label_type': schema.label_type,
-                'created_by': schema.created_by,
-                'from_addr': schema.from_addr,
-                'to_addr': schema.to_addr,
-                'amount': schema.amount,
-                'memo': schema.memo,
-                'labels': schema.labels          
-            }
-        return {"results": "success", "data": schema_dict}, 200
+        return schemas, 200
 
 class TransactionDetails(Resource):
     @auth.login_required
@@ -321,6 +296,7 @@ class TransactionDetails(Resource):
 
         return {"results": "success", "data": {}}, 200
     
+    @marshal_with(labelSchema_fields, envelope='data')
     @auth.login_required
     def get(self):
         user = g.user
@@ -329,16 +305,7 @@ class TransactionDetails(Resource):
         if tx_details is None:
             abort(400, "No transaction details for this User")
         
-        detail_dict = {}
-        for detail in tx_details:
-            detail_dict[detail.id] = {
-                'tx_hash': detail.tx_hash,
-                'created_by': detail.created_by,
-                'memo': detail.memo,
-                'labels': detail.labels
-            }
-        
-        return {"results": "success", "data": detail_dict}, 200
+        return tx_details, 200
 
         
 api.add_resource(Token, "/token")

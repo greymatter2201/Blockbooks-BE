@@ -2,7 +2,7 @@ import requests, os, time, sys
 from dotenv import load_dotenv
 # Bring your packages onto the path
 sys.path.append(os.path.abspath(os.path.join('..', 'Blockbooks_BE', 'app')))
-from .etherscan_tx import get_tx_action
+from scripts.etherscan_tx import get_tx_action
 from pprint import pprint
 
 load_dotenv()
@@ -79,8 +79,12 @@ def get_tx(chain_id, address, page_size=10):
 
         #Gets TX actions from scraping Etherscan
         actions = get_tx_action(tx.get('tx_hash'))
-        action = [action[0] for action in actions]
-
+        if actions:
+            action = actions[0][0]
+        else:
+            action = None
+        
+        
         transactions[tx.get('tx_hash')] = {
             'chain_id': tx.get('chain_id'),
             'block_number': tx.get('block_height'),
@@ -94,7 +98,7 @@ def get_tx(chain_id, address, page_size=10):
             'rate': format_a_rate,
         }
     return transactions
-    
+
 def get_all_chains():
     endpoint = f"/chains/?quote-currency=USD&format=JSON&key={COVALENT_API_KEY}"
     url = base_url + endpoint

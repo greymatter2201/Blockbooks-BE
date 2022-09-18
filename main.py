@@ -5,12 +5,12 @@ from app.models import Transaction, Wallet, User, transaction_detail, Contact, L
 def make_shell_context():
     return {
         'db': db,
-        'Transactions': Transaction,
-        'transaction_details' : transaction_detail,
+        'Transaction': Transaction,
+        'transaction_detail' : transaction_detail,
         'Contact': Contact,
         'Wallet': Wallet,
         'User': User,
-        'Labels': Label,
+        'Label': Label,
         'label_schema': label_schema
     }
 

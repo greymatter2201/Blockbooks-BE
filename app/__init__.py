@@ -33,6 +33,6 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 
 #Instantiate Migration
-migrate = Migrate(app, db)
+migrate = Migrate(app, db, compare_type=True)
 
 from app import routes, models

@@ -1,8 +1,8 @@
-"""empty message
+"""First migrationn
 
-Revision ID: 66dcc08707d1
+Revision ID: 98315fee0e07
 Revises: 
-Create Date: 2022-09-17 21:27:54.783430
+Create Date: 2022-09-18 17:56:07.099298
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '66dcc08707d1'
+revision = '98315fee0e07'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,14 +21,14 @@ def upgrade():
     op.create_table('transaction',
     sa.Column('tx_hash', sa.String(length=66), nullable=False),
     sa.Column('chain_id', sa.Integer(), nullable=False),
-    sa.Column('block_number', sa.Integer(), nullable=False),
+    sa.Column('block_number', sa.String(), nullable=False),
     sa.Column('from_addr', sa.String(length=42), nullable=False),
     sa.Column('to_addr', sa.String(length=42), nullable=False),
     sa.Column('tx_timestamp', sa.BigInteger(), nullable=False),
-    sa.Column('tx_value', sa.Integer(), nullable=False),
-    sa.Column('tx_gas', sa.Integer(), nullable=False),
+    sa.Column('tx_value', sa.BigInteger(), nullable=False),
+    sa.Column('tx_gas', sa.BigInteger(), nullable=False),
     sa.Column('tx_gas_price', sa.BigInteger(), nullable=False),
-    sa.Column('tx_actions', sa.String(length=20), nullable=True),
+    sa.Column('tx_actions', sa.String(), nullable=True),
     sa.Column('rate', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('tx_hash')
     )
