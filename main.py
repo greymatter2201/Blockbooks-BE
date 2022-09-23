@@ -1,6 +1,6 @@
 from app import app, socketio, db
 from app.models import Transaction, Wallet, User, transaction_detail, Contact, Label, label_schema
-
+from flask import g
 @app.shell_context_processor
 def make_shell_context():
     return {
@@ -11,7 +11,8 @@ def make_shell_context():
         'Wallet': Wallet,
         'User': User,
         'Label': Label,
-        'label_schema': label_schema
+        'label_schema': label_schema,
+        'g': g
     }
 
 if __name__ == "__main__":

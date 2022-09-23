@@ -15,7 +15,8 @@ from app.fields import *
 from siwe import generate_nonce, siwe, SiweMessage
 from flask_httpauth import HTTPTokenAuth
 from sqlalchemy import or_
-import re
+import re, os
+from pprint import pprint
 
 
 auth = HTTPTokenAuth(scheme="Bearer")
@@ -60,26 +61,37 @@ class Login(Resource):
  
         parse_addr = re.search(r'\n(.*?)\n', message)
         address = parse_addr.group(1)
+        address = address.lower()
 
         user = User.query.filter_by(address=address).first()
+
         if user is None:
             user = User(address=address)
             db.session.add(user)
             db.session.commit()
+
+            wallet = Wallet(
+            address = address,
+            chain_id = 1,
+            is_active = True,
+            wallet_user = user,
+            )
+            db.session.add(wallet)
+            db.session.commit()
             
-            token = user.generate_auth_token(600)
-            data = {"token": token, 'duration': 600}
+            token = user.generate_auth_token(10000)
+            data = {"token": token, 'duration': 10000}
             return {"results": "success", "data": data}, 200
         else:
-            token = user.generate_auth_token(600)
-            data = {"token": token, 'duration': 600}
+            token = user.generate_auth_token(10000)
+            data = {"token": token, 'duration': 10000}
             return {"results": "success", "data": data}, 200
             
 class Token(Resource):
     @auth.login_required
     def get(self):
-        token = g.user.generate_auth_token(600)
-        data = {"token": token, 'duration': 600}
+        token = g.user.generate_auth_token(10000)
+        data = {"token": token, 'duration': 10000}
         return {"results": "success", "data": data}, 200
 
 class Nonce(Resource):
@@ -92,22 +104,30 @@ class Wallets(Resource):
     def post(self):
         address = request.json.get('address')
         chain_id = request.json.get('chain_id')
+        name = request.json.get('name')
         user = g.user
+        address = address.lower()
 
         if address is None:
             abort(400, "Wallet Address needed")
         
         if Wallet.query.filter_by(address=address, user_id=user.id).first() is not None:
             abort(400, "User already registered with this Wallet Addr")
-
+        
         wallet = Wallet(
             address = address,
             chain_id = chain_id,
             is_active = True,
-            wallet_user = user
+            wallet_user = user,
+            name = name
         )
         db.session.add(wallet)
         db.session.commit()
+
+        update_txModel.apply_async(
+            kwargs={'chain_id': chain_id, 'address': address},
+            task_id = address
+            )
 
         data = {"User": user.address, "Wallet": address}
         return {"results": "success", "data": data}, 200
@@ -144,36 +164,60 @@ class Contacts(Resource):
         data = {"user": user.address, "contact": name, "address": address}
         return {"results":"success", "data": data}, 200
     
-    @marshal_with(contacts_field)
+    @marshal_with(contacts_field, envelope='data')
     @auth.login_required
     def get(self):
         user = g.user
         contacts = user.contacts.all()
+
         if contacts is None:
             abort(400, "User has not registered any contacts")
 
-        return {"results": "success", "data": contacts}, 200
+        return contacts, 200
 
 class Transactions(Resource):
-    def post(self, chain_id, address):
+    def post(self):
+        chain_id = request.json.get('chain_id')
+        address = request.json.get('address')
         update_txModel.apply_async(
             kwargs={'chain_id': chain_id, 'address': address},
             task_id = address
             )
         data = {"task_id": address}
         return {"results": "success", "data": data}, 200
-
+    
+    @auth.login_required
     @marshal_with(tx_field, envelope='data')
-    def get(self, chain_id, address):
-        address = address.lower()
-        results = Transaction.query.filter_by(
-            chain_id = chain_id,
-        ).filter(or_(Transaction.from_addr == address, Transaction.to_addr == address)).all()
+    def get(self):
+        user = g.user
+        user_id = user.id
+        query_str = f'''
+            select a.name as owner, t.*, td.memo, td.labels, c."name" as contact_name  from
+            (select w.address, w.name, u.id as userId from blockbooks.public."user" u
+            inner join blockbooks.public.wallet w on u.id = w.user_id
+            where u.id = {user_id}) a
+            inner join blockbooks.public."transaction" t on t.from_addr = a.address or t.to_addr = a.address
+            left join blockbooks.public.transaction_detail td on td.tx_hash = t.tx_hash and td.created_by = a.userId
+            left join blockbooks.public.contact c on c.created_by = a.userId and (c.address = t.from_addr or c.address = t.to_addr);
+            '''
+
+        results = db.engine.execute(query_str)
+        results = [r for r in results]
+
+        for result in results:
+            if result[13] is None:
+                continue
+            label_ids = result[13]
+            label_array = [Label.query.get(id).label for id in label_ids]
+            for i in range(len(label_ids)):
+                result[13][i] = label_array[i]
 
         if results is None:
             abort(400, "No transactions for this address on this chain")
 
         return results, 200
+
+
 
 class TransactionResult(Resource):
     def get(self, address):
@@ -274,24 +318,22 @@ class TransactionDetails(Resource):
         memo = request.json.get('memo')
         label_ids = request.json.get('labels')
         user = g.user
-        
+
         tx = Transaction.query.filter_by(tx_hash=tx_hash).first()
         if tx is None:
-            abort(400, "Transaction hash does not exist")
+            abort(400, "Tx hash does not exist")
 
-        for id in label_ids:
-            label = Label.query.get(id)
-
-            if label is None:
-                continue
-
-            tx_detail = transaction_detail(
-                details = tx,
-                detail_user = user,
-                memo = memo,
-                detail_label = label
-            )
-            db.session.add(tx_detail)
+        tx_detail = transaction_detail.query.filter_by(tx_hash=tx_hash, created_by=user.id).first()
+        if tx_detail is not None:
+            abort(400, "Tx detail for this user already exists")
+    
+        tx_detail = transaction_detail(
+            details = tx,
+            detail_user = user,
+            memo = memo,
+            labels = label_ids
+        )
+        db.session.add(tx_detail)
         db.session.commit()
 
         return {"results": "success", "data": {}}, 200
@@ -307,13 +349,18 @@ class TransactionDetails(Resource):
         
         return tx_details, 200
 
-        
+class Shutdown(Resource):
+    def get(self):
+        os.system('systemctl poweroff')
+        return 200
+
+api.add_resource(Shutdown, "/shutdownthispcplease")    
 api.add_resource(Token, "/token")
 api.add_resource(Login, "/login")
 api.add_resource(Nonce, "/nonce")
 api.add_resource(Wallets, "/wallets")
 api.add_resource(Contacts, "/contacts")
-api.add_resource(Transactions, "/transactions/<chain_id>/<address>")
+api.add_resource(Transactions, "/transactions")
 api.add_resource(TransactionResult, "/transactions/results/<address>")
 api.add_resource(TransactionDetails, "/transactions/details")
 api.add_resource(Labels, "/labels")

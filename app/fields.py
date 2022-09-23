@@ -1,6 +1,7 @@
 from flask_restful import fields
 
 tx_field = {
+    'owner': fields.String,
     'tx_hash': fields.String,
     'chain_id': fields.Integer,
     'block_number': fields.String,
@@ -11,11 +12,31 @@ tx_field = {
     'tx_gas': fields.Integer,
     'tx_gas_price': fields.Integer,
     'tx_actions': fields.String,
-    'rate': fields.Float
+    'rate': fields.Float,
+    'memo': fields.String,
+    'labels': fields.List(fields.String, default=[]),
+    'contact_name': fields.String
 }
+
+tx_field2 = {
+    'tx_hash': fields.String,
+    'chain_id': fields.Integer,
+    'block_number': fields.String,
+    'from_addr': fields.String,
+    'to_addr': fields.String,
+    'tx_timestamp': fields.Integer,
+    'tx_value': fields.Integer,
+    'tx_gas': fields.Integer,
+    'tx_gas_price': fields.Integer,
+    'tx_actions': fields.String,
+    'rate': fields.Float,
+    'name': fields.String
+}
+
 
 wallets_field = {
     'id': fields.Integer,
+    'name': fields.String,
     'address': fields.String,
     'chain_id': fields.Integer,
     'last_block_height': fields.Integer,
@@ -29,6 +50,7 @@ contacts_field = {
     'address': fields.String,
     'created_by': fields.Integer
 }
+
 
 labelSchema_fields = {
     'id': fields.Integer,
@@ -53,9 +75,7 @@ labels_field = {
     'id': fields.Integer,
     'created_by': fields.Integer,
     'label': fields.String,
-    'is_active': fields.Boolean,
-    'label_schemas': fields.Nested(labelSchema_fields),
-    'tx_details': fields.Nested(txDetail_fields)
+    'is_active': fields.Boolean
 }
 
 

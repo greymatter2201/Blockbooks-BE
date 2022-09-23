@@ -2,7 +2,7 @@ import requests, os, time, sys
 from dotenv import load_dotenv
 # Bring your packages onto the path
 sys.path.append(os.path.abspath(os.path.join('..', 'Blockbooks_BE', 'app')))
-from scripts.etherscan_tx import get_tx_action
+from .etherscan_tx import get_tx_action
 from pprint import pprint
 
 load_dotenv()

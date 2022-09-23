@@ -10,8 +10,7 @@ ENV PYTHONUNBUFFERED 1
 
 # To make psycopg2 happy
 RUN apt-get update \
-    && apt-get -y install libpq-dev gcc \
-    && pip install psycopg2
+    && apt-get -y install libpq-dev gcc
 
 # install dependencies
 RUN pip install --upgrade pip
@@ -20,3 +19,5 @@ RUN pip install -r requirements.txt
 
 # copy project
 COPY . /usr/src/app/
+
+EXPOSE 5432
