@@ -325,7 +325,9 @@ class TransactionDetails(Resource):
 
         tx_detail = transaction_detail.query.filter_by(tx_hash=tx_hash, created_by=user.id).first()
         if tx_detail is not None:
-            abort(400, "Tx detail for this user already exists")
+            tx_detail.memo = memo
+            db.session.commit()
+            return {"results": "success", "data": "updated memo"}, 200
     
         tx_detail = transaction_detail(
             details = tx,
