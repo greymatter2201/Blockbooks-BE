@@ -1,5 +1,5 @@
-from flask_restful import Resource, abort, marshal_with, fields
-from flask import abort, request, g, jsonify
+from flask_restful import Resource, abort, marshal_with
+from flask import abort, request, g
 from app import db, api, celery
 from app.models import (
     Transaction,
@@ -10,13 +10,13 @@ from app.models import (
     Label,
     label_schema
 )
-from app.tasks import update_txModel, add
+from app.tasks import update_txModel
 from app.fields import *
+from app.scripts.covalent_tx import get_latest_block
 from siwe import generate_nonce, siwe, SiweMessage
 from flask_httpauth import HTTPTokenAuth
 from sqlalchemy import or_
-import re, os
-from pprint import pprint
+import re
 
 
 auth = HTTPTokenAuth(scheme="Bearer")
@@ -112,12 +112,15 @@ class Wallets(Resource):
             abort(400, "Wallet Address needed")
         
         if Wallet.query.filter_by(address=address, user_id=user.id).first() is not None:
-            abort(400, "User already registered with this Wallet Addr")
-        
+            abort(400, "User already registered with this Wallet Addr") 
+
+        latest_block_height = get_latest_block(chain_id)
+
         wallet = Wallet(
             address = address,
             chain_id = chain_id,
             is_active = True,
+            last_block_height = latest_block_height,
             wallet_user = user,
             name = name
         )

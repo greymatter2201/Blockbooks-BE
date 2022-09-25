@@ -139,9 +139,6 @@ class TestModelLookup(TestCase):
         assert label_scheme in label_schemes
 
     def test_transaction_detail(self):
-        label = self.commit_label()
-        label = Label.query.get(1)
-
         user = User.query.get(1)
         
         tx = self.commit_tx()
@@ -152,7 +149,7 @@ class TestModelLookup(TestCase):
             memo = "Sent ETH for Food",
             details = tx,
             detail_user = user,
-            detail_label = label
+            labels = ['1', '2', '3']
         )
 
         db.session.add(tx_detail)

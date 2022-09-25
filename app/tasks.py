@@ -30,7 +30,3 @@ def update_txModel(chain_id, address):
         db.session.add(tx)
     db.session.commit()
     return True
-
-@celery.task
-def add(x, y):
-    return x + y
