@@ -1,5 +1,5 @@
 from flask_restful import Resource, abort, marshal_with
-from flask import abort, request, g
+from flask import abort, request, g, make_response, send_file
 from app import db, api, celery
 from app.models import (
     Transaction,
@@ -16,7 +16,7 @@ from app.scripts.covalent_tx import get_latest_block
 from siwe import generate_nonce, siwe, SiweMessage
 from flask_httpauth import HTTPTokenAuth
 from sqlalchemy import or_
-import re
+import re, csv, io
 
 
 auth = HTTPTokenAuth(scheme="Bearer")
@@ -196,12 +196,12 @@ class Transactions(Resource):
         user_id = user.id
         query_str = f'''
             select a.name as owner, t.*, td.memo, td.labels, c."name" as contact_name  from
-            (select w.address, w.name, u.id as userId from blockbooks.public."user" u
-            inner join blockbooks.public.wallet w on u.id = w.user_id
+            (select w.address, w.name, u.id as userId from dockerdbtest.public."user" u
+            inner join dockerdbtest.public.wallet w on u.id = w.user_id
             where u.id = {user_id}) a
-            inner join blockbooks.public."transaction" t on t.from_addr = a.address or t.to_addr = a.address
-            left join blockbooks.public.transaction_detail td on td.tx_hash = t.tx_hash and td.created_by = a.userId
-            left join blockbooks.public.contact c on c.created_by = a.userId and (c.address = t.from_addr or c.address = t.to_addr);
+            inner join dockerdbtest.public."transaction" t on t.from_addr = a.address or t.to_addr = a.address
+            left join dockerdbtest.public.transaction_detail td on td.tx_hash = t.tx_hash and td.created_by = a.userId
+            left join dockerdbtest.public.contact c on c.created_by = a.userId and (c.address = t.from_addr or c.address = t.to_addr);
             '''
 
         results = db.engine.execute(query_str)
@@ -219,7 +219,6 @@ class Transactions(Resource):
             abort(400, "No transactions for this address on this chain")
 
         return results, 200
-
 
 
 class TransactionResult(Resource):
@@ -353,7 +352,56 @@ class TransactionDetails(Resource):
             abort(400, "No transaction details for this User")
         
         return tx_details, 200
+
+class CSV(Resource):
+    @auth.login_required
+    def get(self):
+        user = g.user
+        user_id = user.id
+        query_str = f'''
+            select a.name as owner, t.*, td.memo, td.labels, c."name" as contact_name  from
+            (select w.address, w.name, u.id as userId from dockerdbtest.public."user" u
+            inner join dockerdbtest.public.wallet w on u.id = w.user_id
+            where u.id = {user_id}) a
+            inner join dockerdbtest.public."transaction" t on t.from_addr = a.address or t.to_addr = a.address
+            left join dockerdbtest.public.transaction_detail td on td.tx_hash = t.tx_hash and td.created_by = a.userId
+            left join dockerdbtest.public.contact c on c.created_by = a.userId and (c.address = t.from_addr or c.address = t.to_addr);
+            '''
+
+        results = db.engine.execute(query_str)
+        results = [r for r in results]
+
+        for result in results:
+            if result[13] is None:
+                continue
+            label_ids = result[13]
+            label_array = [Label.query.get(id).label for id in label_ids]
+            for i in range(len(label_ids)):
+                result[13][i] = label_array[i]
+
+        if results is None:
+            abort(400, "No transactions for this address on this chain")
+        
+
+        rows = [
+            'owner', 'tx_hash', 'chain_id', 'block_number', 'from_addr', 'to_addr', 
+            'tx_timestamp', 'tx_value', 'tx_gas', 'tx_gas_price', 'tx_actions',
+            'rate', 'memo', 'labels', 'contact_name'
+        ]
+
+        stream = io.StringIO()
+        writer = csv.writer(stream)
+        writer.writerow(rows)
+        for data in results:
+            writer.writerow(data)
+        
+        response = make_response(stream.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        response.headers["Content-type"] = "text/csv"
+
+        return response
  
+api.add_resource(CSV, "/csv")
 api.add_resource(Token, "/token")
 api.add_resource(Login, "/login")
 api.add_resource(Nonce, "/nonce")
