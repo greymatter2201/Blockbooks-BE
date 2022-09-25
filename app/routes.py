@@ -350,13 +350,7 @@ class TransactionDetails(Resource):
             abort(400, "No transaction details for this User")
         
         return tx_details, 200
-
-class Shutdown(Resource):
-    def get(self):
-        os.system('systemctl poweroff')
-        return 200
-
-api.add_resource(Shutdown, "/shutdownthispcplease")    
+ 
 api.add_resource(Token, "/token")
 api.add_resource(Login, "/login")
 api.add_resource(Nonce, "/nonce")
